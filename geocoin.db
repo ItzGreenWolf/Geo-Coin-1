@@ -1,0 +1,80 @@
+import tkinter as tk
+import sqlite3
+import time
+from datetime import datetime
+
+# -------------------------------
+# Database Setup
+# -------------------------------
+conn = sqlite3.connect("geocoin.db")
+cursor = conn.cursor()
+
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS mining (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT,
+    amount REAL,
+    usd_value REAL
+)
+''')
+conn.commit()
+
+# -------------------------------
+# GeoCoin Miner Class
+# -------------------------------
+class GeoCoinMiner:
+    def __init__(self):
+        self.coins = 0.0
+        self.usd_rate = 0.01  # 1 coin = $0.01
+
+    def mine(self):
+        self.coins += 1.0  # 1 coin per second
+        usd_value = self.coins * self.usd_rate
+
+        # Save mined coin into database
+        cursor.execute(
+            "INSERT INTO mining (timestamp, amount, usd_value) VALUES (?, ?, ?)",
+            (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 1.0, usd_value)
+        )
+        conn.commit()
+
+        return self.coins, usd_value
+
+# -------------------------------
+# GUI Class
+# -------------------------------
+class GeoCoinApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("GeoCoin Miner")
+
+        self.miner = GeoCoinMiner()
+
+        # Labels
+        self.timer_label = tk.Label(root, text="Mining...", font=("Arial", 14))
+        self.timer_label.pack(pady=10)
+
+        self.coin_label = tk.Label(root, text="Coins: 0", font=("Arial", 16))
+        self.coin_label.pack(pady=10)
+
+        self.usd_label = tk.Label(root, text="Value: $0.00", font=("Arial", 16))
+        self.usd_label.pack(pady=10)
+
+        # Start mining loop
+        self.update_mining()
+
+    def update_mining(self):
+        coins, usd_value = self.miner.mine()
+        self.coin_label.config(text=f"Coins: {coins:.2f}")
+        self.usd_label.config(text=f"Value: ${usd_value:.2f}")
+        self.timer_label.config(text=f"Last Mined: {time.strftime('%H:%M:%S')}")
+
+        self.root.after(1000, self.update_mining)
+
+# -------------------------------
+# Run App
+# -------------------------------
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = GeoCoinApp(root)
+    root.mainloop()
